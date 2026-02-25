@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Interface</title>
+    <style>
+        h3{
+            font-family:Arial, Helvetica, sans-serif;
+            font-style: italic;
+        }
+        #output { 
+        background-color: #f1ffb7; 
+        padding: 10px; 
+        margin-top: 10px;
+        white-space: pre-wrap;
+        font-family: monospace;
+      }
+    </style>
+</head>
+<body>
+    <div>
+        <h3>Place Order</h3>
+        <input type="number" id="cust_id" placeholder="Enter Customer ID">
+        <input type="text" id="prod_code" placeholder="Enter Product Code">
+        <input type="number" id="quantity" placeholder="Enter Quantity">
+        <button type="button" onclick="place_order();">Place Order</button>
+    </div>
+    <br>
+    <hr/>
+    <br>
+
+    <div>
+        <h3>View Order</h3>
+        <input type="number" id="view_cust_id" placeholder="Enter Customer ID"/>
+        <button type="button" onclick="view_orders();">View Orders</button>
+    </div>
+    <br>
+    <hr/>
+    <br>
+
+    <div>
+        <h3>Cancel Order</h3>
+        <input type="number" id="order_id_cancel" placeholder="Enter Order ID"/>
+        <button type="button" onclick="cancel_order();">Cancel Order</button>
+    </div>
+    <br>
+    <hr/>
+    <br>
+
+    <div>
+        <h3>View Products</h3>
+        <button type="button" onclick="view_products();">View Products</button>
+    </div>
+    <br>
+    <hr/>
+    <div id="output"></div>
+    <br>
+
+    <script>
+        const base_url = "http://localhost:8080/customer"
+
+        function place_order(){
+            // html elements
+            const output = document.getElementById("output");
+            const cust_id = document.getElementById("cust_id").value;
+            const prod_code = document.getElementById("prod_code").value;
+            const quantity = document.getElementById("quantity").value;
+
+            // clear the input boxes
+            document.getElementById("cust_id").value = "";
+            document.getElementById("prod_code").value = "";
+            document.getElementById("quantity").value = "";
+
+            // data parsing
+            const url = base_url + "/orders";
+            const data = {
+                custID: parseInt(cust_id),
+                prodCode: prod_code,
+                quantity: parseInt(quantity)
+            };
+
+            // sends POST request then processes the response
+            fetch(url, {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify(data)
+            })
+                then(response => response.json()).
+                then(data => output.innerHTML = "Order Created: \n" + JSON.stringify(data, null, 2)).
+                catch(error => output.innerHTML = error);
+        }
+
+        function view_orders(){
+            const output = document.getElementById("output");
+            const cust_id = document.getElementById("view_cust_id").value;
+            
+            // clear input
+            document.getElementById("view_cust_id").value = "";
+
+            const url = base_url + "/" + cust_id + "/orders";
+
+            fetch(url).
+            then(response => response.json()).
+            then(data => output.innerHTML = "Orders: \n" + JSON.stringify(data, null, 2)).
+            catch(error => output.innerHTML = error);
+        }
+
+        function cancel_order(){
+            const output = document.getElementById("output");
+            const order_id = document.getElementById("order_id_cancel").value;
+            document.getElementById("order_id_cancel").value = "";
+            const url = base_url + "/orders/" + order_id + "/cancel";
+
+            fetch(url, {
+                method: "PUT"
+            }).
+            then(response =>{
+                if(response.status == 204){
+                    output.innerHTML = "204: Order ID " + order_id + " Cancelled.";
+                }
+                else{
+                    output.innerHTML = "Error: " + response.status;
+                }
+            }).catch(error => output.innerHTML = error);
+        }
+
+        function view_products(){
+            const output = document.getElementById("output");
+            const url = base_url + "/products";
+
+            fetch(url).
+            then(response => response.json()).
+            then(data => output.innerHTML = "Products: \n" + JSON.stringify(data, null, 2)).
+            catch(error => output.innerHTML = error);
+        }
+        
+    </script>
+</body>
+</html>

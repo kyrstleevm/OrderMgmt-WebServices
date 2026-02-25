@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Operator Interface</title>
+    <style>
+        h3{
+            font-family:Arial, Helvetica, sans-serif;
+            font-style: italic;
+        }
+        .output { 
+        background-color: #f1ffb7; 
+        padding: 10px; 
+        margin-top: 10px;
+        white-space: pre-wrap;
+        font-family: monospace;
+      }
+      .view_output{
+        background-color: #eeefea; 
+        padding: 5px; 
+        margin-top: 10px;
+        white-space: pre-wrap;
+        font-family: monospace;
+      }
+      #logged-in{
+        display: none;
+      }
+    </style>
+</head>
+<body id="logged-in">
+    <div>
+        <h3>Get Product From Wholesaler</h3>
+        <input type="text" id="prod_code_ws" placeholder="Enter Product Code">
+        <button type="button" onclick="sync_product();">Import Product</button> 
+    </div>
+
+    <div id="fresh_prod" class="view_output"></div>
+    <br>
+    <hr/>
+    <br>
+
+        <!-- View Products, Orders, Stocks, and Customer Revenue -->
+    <div>
+        <h3>View Data</h3>
+        <div class="view-buttons">
+            <button type="button" onclick="view_products();">View Products</button>
+            <button type="button" onclick="view_orders();">View Orders</button>
+        </div>
+        <div style="padding-top: 30px;">
+            <input type="number" id="revenue_cust_id" placeholder="Enter Customer ID">
+            <button type="button" onclick="view_revenue();">View Revenue</button>
+            <input type="text" id="stock_prod_code" placeholder="Enter product code">
+            <button type="button" onclick="check_stock();" style="margin-top: 12px;">View Stocks</button>
+            <button type="button" onclick="delete_product();" style="margin-top: 12px;">Delete Product</button>
+        </div>
+        
+        <div id="view_output" class="view_output"></div>
+    </div>
+    <br>
+    <hr/>
+    <br>
+
+    <div>
+        <h3>Update Product Retail Price</h3>
+        <input type="text" id="prod_code" placeholder="Enter Product Code">
+        <input type="number" id="new_price" placeholder="Enter new price" step="0.01">
+        <button type="button" onclick="update_rp();">Update Price</button>
+    </div>
+    <br>
+    <hr/>
+    <br>
+
+    <div class="section">
+        <h3>Change Order Status</h3>
+        <input type="number" id="order_id_stat" placeholder="Enter Order ID">
+        <select id="newStatus">
+            <option value="" disabled selected>Select an option</option>
+            <option value="PENDING">PENDING</option>
+            <option value="SHIPPED">SHIPPED</option>
+            <option value="CANCELLED">CANCELLED</option>
+            <option value="OUT_OF_STOCK">OUT_OF_STOCK</option>
+        </select>
+        <button type="button" onclick="change_status();">Update Status</button>
+    </div>
+
+    <br>
+    <hr/>
+    <br>
+
+    <div>
+        <h3>Set On-Sale Status</h3>
+        <input type="text" id="sale_prod_code" placeholder="Enter product code">
+        <button type="button" onclick="addToSale();">Add to Sale</button>
+        <button type="button" onclick="removeFromSale();">Remove from Sale</button>
+    </div>
+    <br>
+    <div id="output" class="output"></div>
+
+    <script>
+        // constant final variables (url and authorization code for headers)
+        const base_url = "http://localhost:8080/operator";
+        let auth_code = "";
+        const CODE = "Stir@123";
+
+        // Show prompt on page load
+        function login() {
+            const password = prompt("Enter operator password:");
+            
+            if (password === CODE) {
+                auth_code = password;
+                document.getElementById("logged-in").style.display = "block";
+            } else if (password !== null) { // User didn"t click Cancel
+                alert("Incorrect password!");
+                login(); // Try again
+            }
+        }
+
+        // Call login when page loads
+        login();
+
+        // getting product from wholesaler
+        function sync_product(){
+            const output = document.getElementById("fresh_prod");
+            const prod_code = document.getElementById("prod_code_ws").value;
+
+            document.getElementById("prod_code_ws").value = "";
+
+            const url = base_url + "/wholesaler/products/" + prod_code;
+
+            fetch(url, {
+                method: "POST",
+                headers:{
+                    "Authorization": auth_code,
+                    "Content-Type": "application/json"
+                }
+            }).
+            then(response => response.json()).
+            then(data => output.innerHTML = "Product Imported: \n" + JSON.stringify(data, null, 2)).
+            catch(error => output.innerHTML = error);
+        }
+
+        // view products
+        function view_products(){
+            const output = document.getElementById("view_output");
+
+            const url = base_url + "/products"
+
+            fetch(url, {
+                headers: {
+                    "Authorization": auth_code
+                }
+            }).
+            then(response => response.json()).
+            then(data => output.innerHTML = "All Products: \n" + JSON.stringify(data, null, 2)).
+            catch(error => output.innerHTML = error);
+        }
+
+        // view all orders
+        function view_orders(){
+            const output = document.getElementById("view_output");
+
+            const url = base_url + "/orders"
+
+            fetch(url, {
+                headers: {
+                    "Authorization": auth_code
+                }
+            }).
+            then(response => response.json()).
+            then(data => output.innerHTML = "Orders: \n" + JSON.stringify(data, null, 2)).
+            catch(error => output.innerHTML = error);
+        }
+
+        // view customer revenue
+        function view_revenue(){
+            const output = document.getElementById("view_output");
+            const rev_ID = document.getElementById("revenue_cust_id").value;
+
+            document.getElementById("revenue_cust_id").value = "";
+
+            const url = base_url + "/customers/" + rev_ID + "/revenue"
+
+            fetch(url, {
+                headers: {
+                    "Authorization": auth_code
+                }
+            }).
+            then(response => response.json()).
+            then(data => output.innerHTML = "Customer Revenue: " + JSON.stringify(data)).
+            catch(error => output.innerHTML = error);
+        }
+
+        // checking stock of product
+        function check_stock(){
+            const output = document.getElementById("view_output");
+            const stock_code = document.getElementById("stock_prod_code").value;
+
+            document.getElementById("stock_prod_code").value = "";
+
+            const url = base_url + "/products/" + stock_code + "/stock"
+
+            fetch(url, {
+                headers: {
+                    "Authorization": auth_code
+                }
+            }).
+            then(response => response.json()).
+            then(data => output.innerHTML = "Amount of Stock: \n" + JSON.stringify(data, null, 2)).
+            catch(error => output.innerHTML = error);
+        }
+
+        // updating retail price
+        function update_rp(){
+            const output = document.getElementById("output");
+            const prod_code = document.getElementById("prod_code").value;
+            const new_price = document.getElementById("new_price").value;
+
+            document.getElementById("prod_code").value = "";
+            document.getElementById("new_price").value = "";
+
+            const url = base_url + "/products/" + prod_code + "/price"
+            const data = {updatedPrice: parseFloat(new_price)};     // assigning application to script variables
+            fetch(url, {
+                method: "PUT",
+                headers: {
+                    "Authorization": auth_code,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(data)
+            }).
+            then(response => response.json()).
+            then(data => output.innerHTML = "New Retail Price: \n" + JSON.stringify(data, null, 2)).
+            catch(error => output.innerHTML = error);
+        }
+
+        // changing order status
+        function change_status(){
+            const output = document.getElementById("output");
+            const order_id = document.getElementById("order_id_stat").value;
+            const newStatus = document.getElementById("newStatus").value;
+
+            document.getElementById("order_id_stat").value = "";
+
+            const url = base_url + "/orders/" + order_id + "/status"
+            const data = {status: newStatus};        // assigning application to script variables
+
+            fetch(url, {
+                method: "PUT",
+                headers: {
+                    "Authorization": auth_code,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(data)
+            }).
+            then(response => {
+                if(response.status == 204){
+                    output.innerHTML = "204: Order Status Updated."
+                }
+                else{
+                    output.innerHTML = "Error: " + response.status;
+                }
+            }).
+            catch(error => output.innerHTML = error);
+        }
+
+        // remove product
+        function delete_product(){
+            output = document.getElementById("view_output");
+            const stock_code = document.getElementById("stock_prod_code").value;
+
+            document.getElementById("stock_prod_code").value = "";
+
+            const url = base_url + ("/products/") + stock_code;
+
+            fetch(url, {
+                method: "DELETE",
+                headers:{
+                    "Authorization": auth_code
+                }
+            })
+            .then(response => {
+               if (response.status == 204){
+              output.innerHTML = '204: Deleted successfully'
+             }
+                else{
+                    return response.text().then(text => { throw new Error('Bad Request') });
+                }
+          })
+          .catch(error => output.innerHTML = error);
+        }
+        // add to sale function
+        function addToSale(){
+            const output = document.getElementById("output");
+            const prod_code = document.getElementById("sale_prod_code").value;
+
+            document.getElementById("sale_prod_code").value = "";
+
+            const url = base_url + "/products/" + prod_code + "/on-sale";
+
+            fetch(url, {
+                method: "PUT",
+                headers: {
+                    "Authorization": auth_code
+                }
+            })
+            .then(response => response.json())
+            .then(data => output.innerHTML = "Added to sale: \n" + JSON.stringify(data, null, 2))
+            .catch(error => output.innerHTML = error);
+        }
+
+        function removeFromSale() {
+            const output = document.getElementById("output");
+            const prod_code = document.getElementById("sale_prod_code").value;
+
+            document.getElementById("sale_prod_code").value = "";
+
+            const url = base_url + "/products/" + prod_code + "/not-sale";
+
+            fetch(url, {
+                method: "PUT",
+                headers: {
+                    "Authorization": auth_code
+                }
+            })
+            .then(response => response.json())
+            .then(data => output.innerHTML = "Removed From Sale: \n" + JSON.stringify(data, null, 2))
+            .catch(error => output.innerHTML = "Error: " + error);
+        }
+    </script>
+</body>
+</html>
